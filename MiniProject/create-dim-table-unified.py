@@ -1,0 +1,202 @@
+from pyspark.sql import SparkSession
+from pyspark.sql.window import Window
+from pyspark.sql.functions import rank, col, monotonically_increasing_id, row_number,min
+import os
+import pandas
+
+file_path = 'input-data-set/Inventory_Management_Src1.csv'
+
+# input_file_path = os.path.join(script_dir, relative_path)
+
+# Initialize Spark session
+
+
+spark = SparkSession.builder \
+    .appName("Star Schema") \
+    .getOrCreate()
+
+
+
+spark.sparkContext.setLogLevel("ERROR")
+
+
+
+try:
+    df = spark.read.csv(file_path, header=True, inferSchema=True)
+except Exception as e:
+    print("an error was occured reading the main input file ")
+    print("ERROR: ", e)
+
+# define output folder and handle the case when output does not exist
+
+output_dir = "output"
+if not os.path.exists(output_dir):
+    os.makedirs(output_dir)
+
+
+
+#  Customers Dimension Table
+try:
+    customers_df = df.select("CUSTOMER_ID", "Customer Name", "CUSTOMER_LOGIN_ID",
+                             "CUSTOMER_STREET_ADDRESS", "CUSTOMER_CITY", "CUSTOMER_STATE",
+                             "CUSTOMER_ZIP", "CUSTOMER_PHONE_NO").dropDuplicates()
+
+    windowSpec = Window.orderBy(monotonically_increasing_id())
+    customers_dim = customers_df.withColumn("CUSTOMER_DIM_ID", row_number().over(windowSpec))
+
+    # show Customers Dimension table
+    customers_dim.show()
+except Exception as e:
+    print("an error was occured while creating cutomers dimension table ")
+    print("ERROR: ", e)
+
+
+# changing to pandas (to save file in csv)
+try:
+    customers_dim_pandas = customers_dim.toPandas()
+
+    # handling the path not found errors
+
+    # Now save to CSV in the 'output' folder
+    customers_dim_pandas.to_csv(f"{output_dir}/customers_dim.csv", index=False)
+except Exception as e:
+    print("an error was occured while writing(saving) cutomers dimension table ")
+    print("ERROR: ", e)
+
+# product dimension table
+
+try:
+
+    products_df = df.select("PRODUCT_ID", "CATEGORY_ID", "PRODUCT Name", "PRODUCT Brand",
+                            "Product Model No", "PRODUCT_STOCK").dropDuplicates()
+
+    products_df = df.groupby("PRODUCT_ID", "CATEGORY_ID", "PRODUCT Name", "PRODUCT Brand",
+                             "Product Model No").agg(min(col("PRODUCT_STOCK")).alias("PRODUCT_STOCK"))
+
+    products_dim = products_df.withColumn("PRODUCT_DIM_ID", row_number().over(windowSpec))
+
+    # show  Products Dimension table
+    products_dim.show()
+
+except Exception as e:
+    print("an error was occured while creating product dimension table ")
+    print("ERROR: ", e)
+
+# changing to pandas and saving as csv file
+try:
+    products_dim_pandas = products_dim.toPandas()
+    products_dim_pandas.to_csv(f"{output_dir}/products_dim.csv", index=False)
+
+except Exception as e:
+    print("an error was occured while saving(writing) product dimension table ")
+    print("ERROR: ", e)
+
+# Create Seller Dimension Table
+try:
+    sellers_df = df.select("SELLER_ID", "SELLER_NAME", "SELLER_RATING", "SELLER_STREET_ADDRESS",
+                           "SELLER_CITY", "SELLER_STATE", "SELLER_ZIP", "SELLER_PHONE_NO").dropDuplicates()
+
+    sellers_dim = sellers_df.withColumn("SELLER_DIM_ID", row_number().over(windowSpec))
+
+    # show Seller Dimension table
+    sellers_dim.show()  # write.csv("output/sellers_dim", header=True)
+
+except Exception as e:
+    print("an error was occured while creating seller dimension table ")
+    print("ERROR: ", e)
+
+# creating pandas and saving it
+try:
+    sellers_dim_pandas = sellers_dim.toPandas()
+
+    sellers_dim_pandas.to_csv(f"{output_dir}/sellers_dim.csv", index=False)
+
+except Exception as e:
+    print("an error was occured while writing  seller dimension table ")
+    print("ERROR: ", e)
+
+# Create Time Dimension
+
+try:
+    time_df = df.select("Date").dropDuplicates()
+
+    # Extract Year, Quarter, Month, Day_of_Week
+    from pyspark.sql.functions import to_date, year, quarter, month, dayofweek
+
+    time_dim = time_df.withColumn("YEAR", year(to_date(col("Date"), "dd-MMM-yy"))) \
+        .withColumn("QUARTER", quarter(to_date(col("Date"), "dd-MMM-yy"))) \
+        .withColumn("MONTH", month(to_date(col("Date"), "dd-MMM-yy"))) \
+        .withColumn("DAY_OF_WEEK", dayofweek(to_date(col("Date"), "dd-MMM-yy"))) \
+        .withColumn("TIME_DIM_ID", row_number().over(windowSpec))
+
+    # abc =  year(to_date("28-aug-11", "dd-mmm-yy"))
+    # print(abc)
+
+    time_dim.select.show()  # write.csv("output/time_dim", header=True)
+
+except Exception as e:
+    print("an error was occured while creating Date dimension table ")
+    print("ERROR: ", e)
+
+
+
+try:
+    time_dim_pandas = time_dim.toPandas()
+    time_dim_pandas.to_csv(f"{output_dir}/time_dim.csv", index=False)
+except Exception as e:
+    print("an error was occured while saving time dimension table " )
+    print( "ERROR: " , e)
+
+#  Transaction  Table
+
+try:
+
+    transaction_df = df.select("TRANSACTION_ID", "TRANSACTION_DATE", "TRANSACTION_AMOUNT",
+                               "TRANSACTION_TYPE", "DISPATCH_DATE", "EXPECTED_DATE", "DELIVERY_DATE").dropDuplicates()
+
+    transaction_dim = transaction_df.withColumn("TRANSACTION_DIM_ID", row_number().over(windowSpec))
+
+    transaction_dim.show()
+
+except Exception as e:
+    print("an error was occured while creating transaction dimension table ")
+    print("ERROR: ", e)
+
+try:
+    transaction_dim_pandas = transaction_dim.toPandas()
+
+    transaction_dim_pandas.to_csv(f"{output_dir}/transaction_dim.csv", index=False)
+
+except Exception as e:
+    print("an error was occured while writing  trasaction dimension table ")
+    print("ERROR: ", e)
+
+#  Fact Table (Inventory)
+try:
+    inventory_fact_df = df.select("DATE", "TRANSACTION_ID", "PRODUCT_ID", "CUSTOMER_ID",
+                                  "SELLER_ID", "PRODUCT_COST_PRICE", "PRODUCT_SELLING_PRICE").dropDuplicates()
+    inventory_fact_df = inventory_fact_df.join(time_dim, "DATE", "inner")
+
+    inventory_fact = inventory_fact_df.withColumn("FACT_ID", row_number().over(windowSpec))
+
+    inventory_fact.show()
+
+except Exception as e:
+    print("an error was occured while creating inventory fact table ")
+    print("ERROR: ", e)
+
+try:
+    inventory_fact_pandas = inventory_fact.select("FACT_ID", "TIME_DIM_ID", "TRANSACTION_ID",
+                                                  "PRODUCT_ID", "CUSTOMER_ID", "SELLER_ID",
+                                                  "PRODUCT_COST_PRICE", "PRODUCT_SELLING_PRICE") \
+        .toPandas()
+
+    inventory_fact_pandas.to_csv(f"output/inventory_fact.csv", index=False)
+
+except Exception as e:
+    print("an error was occured while saving invenotry fact table ")
+    print("ERROR: ", e)
+
+
+
+spark.stop()
