@@ -64,7 +64,7 @@ except Exception as e:
 
 # changing to pandas (to save file in csv)
 try:
-    save_dataframe_as_csv(customers_df, "customers_dim.csv")
+    save_dataframe_as_csv(customers_df, "customers_dim")
 except Exception as e:
     print("an error was occured while writing(saving) cutomers dimension table ")
     print("ERROR: ", e)
@@ -90,7 +90,7 @@ except Exception as e:
 
 # changing to pandas and saving as csv file
 try:
-    save_dataframe_as_csv(products_dim, "products_dim.csv")
+    save_dataframe_as_csv(products_dim, "products_dim")
 
 except Exception as e:
     print("an error was occured while saving(writing) product dimension table ")
@@ -112,7 +112,7 @@ except Exception as e:
 
 # creating pandas and saving it
 try:
-    save_dataframe_as_csv(sellers_df, "sellers_dim.csv")
+    save_dataframe_as_csv(sellers_df, "sellers_dim")
 
 except Exception as e:
     print("an error was occured while writing  seller dimension table ")
@@ -144,7 +144,7 @@ except Exception as e:
 
 
 try:
-    save_dataframe_as_csv(time_dim,"time_dim.csv")
+    save_dataframe_as_csv(time_dim,"time_dim")
 except Exception as e:
     print("an error was occured while saving time dimension table " )
     print( "ERROR: " , e)
@@ -165,7 +165,7 @@ except Exception as e:
     print("ERROR: ", e)
 
 try:
-    save_dataframe_as_csv(transaction_df, "transaction_dim.csv")
+    save_dataframe_as_csv(transaction_df, "transaction_dim")
 
 except Exception as e:
     print("an error was occured while writing  trasaction dimension table ")
@@ -179,14 +179,15 @@ try:
 
     inventory_fact = inventory_fact_df.withColumn("FACT_ID", row_number().over(windowSpec))
 
-    inventory_fact.show()
+    inventory_fact = inventory_fact.select("FACT_ID","TIME_DIM_ID","TRANSACTION_ID", "PRODUCT_ID", "CUSTOMER_ID",
+                                  "SELLER_ID", "PRODUCT_COST_PRICE", "PRODUCT_SELLING_PRICE")
 
 except Exception as e:
     print("an error was occured while creating inventory fact table ")
     print("ERROR: ", e)
 
 try:
-    save_dataframe_as_csv(inventory_fact, "inventory_fact.csv")
+    save_dataframe_as_csv(inventory_fact, "inventory_fact")
 
 except Exception as e:
     print("an error was occured while saving invenotry fact table ")
