@@ -20,6 +20,19 @@ spark = SparkSession.builder \
 spark.sparkContext.setLogLevel("ERROR")
 
 
+output_dir = "output"
+if not os.path.exists(output_dir):
+    os.makedirs(output_dir)
+
+
+def save_dataframe_as_csv(spark_df, filename):
+
+
+    pandas_df = spark_df.toPandas()
+    pandas_df.to_csv(f"{output_dir}/{filename}.csv", index=False)
+
+
+
 
 try:
     df = spark.read.csv(file_path, header=True, inferSchema=True)
@@ -29,9 +42,7 @@ except Exception as e:
 
 # define output folder and handle the case when output does not exist
 
-output_dir = "output"
-if not os.path.exists(output_dir):
-    os.makedirs(output_dir)
+
 
 
 
@@ -53,12 +64,7 @@ except Exception as e:
 
 # changing to pandas (to save file in csv)
 try:
-    customers_dim_pandas = customers_dim.toPandas()
-
-    # handling the path not found errors
-
-    # Now save to CSV in the 'output' folder
-    customers_dim_pandas.to_csv(f"{output_dir}/customers_dim.csv", index=False)
+    save_dataframe_as_csv(customers_df, "customers_dim.csv")
 except Exception as e:
     print("an error was occured while writing(saving) cutomers dimension table ")
     print("ERROR: ", e)
@@ -84,8 +90,7 @@ except Exception as e:
 
 # changing to pandas and saving as csv file
 try:
-    products_dim_pandas = products_dim.toPandas()
-    products_dim_pandas.to_csv(f"{output_dir}/products_dim.csv", index=False)
+    save_dataframe_as_csv(products_dim, "products_dim.csv")
 
 except Exception as e:
     print("an error was occured while saving(writing) product dimension table ")
@@ -107,9 +112,7 @@ except Exception as e:
 
 # creating pandas and saving it
 try:
-    sellers_dim_pandas = sellers_dim.toPandas()
-
-    sellers_dim_pandas.to_csv(f"{output_dir}/sellers_dim.csv", index=False)
+    save_dataframe_as_csv(sellers_df, "sellers_dim.csv")
 
 except Exception as e:
     print("an error was occured while writing  seller dimension table ")
@@ -132,7 +135,7 @@ try:
     # abc =  year(to_date("28-aug-11", "dd-mmm-yy"))
     # print(abc)
 
-    time_dim.select.show()  # write.csv("output/time_dim", header=True)
+    time_dim.show()  # write.csv("output/time_dim", header=True)
 
 except Exception as e:
     print("an error was occured while creating Date dimension table ")
@@ -141,8 +144,7 @@ except Exception as e:
 
 
 try:
-    time_dim_pandas = time_dim.toPandas()
-    time_dim_pandas.to_csv(f"{output_dir}/time_dim.csv", index=False)
+    save_dataframe_as_csv(time_dim,"time_dim.csv")
 except Exception as e:
     print("an error was occured while saving time dimension table " )
     print( "ERROR: " , e)
@@ -163,9 +165,7 @@ except Exception as e:
     print("ERROR: ", e)
 
 try:
-    transaction_dim_pandas = transaction_dim.toPandas()
-
-    transaction_dim_pandas.to_csv(f"{output_dir}/transaction_dim.csv", index=False)
+    save_dataframe_as_csv(transaction_df, "transaction_dim.csv")
 
 except Exception as e:
     print("an error was occured while writing  trasaction dimension table ")
@@ -186,12 +186,7 @@ except Exception as e:
     print("ERROR: ", e)
 
 try:
-    inventory_fact_pandas = inventory_fact.select("FACT_ID", "TIME_DIM_ID", "TRANSACTION_ID",
-                                                  "PRODUCT_ID", "CUSTOMER_ID", "SELLER_ID",
-                                                  "PRODUCT_COST_PRICE", "PRODUCT_SELLING_PRICE") \
-        .toPandas()
-
-    inventory_fact_pandas.to_csv(f"output/inventory_fact.csv", index=False)
+    save_dataframe_as_csv(inventory_fact, "inventory_fact.csv")
 
 except Exception as e:
     print("an error was occured while saving invenotry fact table ")
