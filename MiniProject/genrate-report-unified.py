@@ -22,13 +22,26 @@ if not os.path.exists(output_dir):
 
 
 
-# Load the Dimension and Fact tables
-customers_dim = spark.read.csv("output/customers_dim.csv", header=True, inferSchema=True)
-products_dim = spark.read.csv("output/products_dim.csv", header=True, inferSchema=True)
-sellers_dim = spark.read.csv("output/sellers_dim.csv", header=True, inferSchema=True)
-time_dim = spark.read.csv("output/time_dim.csv", header=True, inferSchema=True)
-transaction_dim = spark.read.csv("output/transaction_dim.csv", header=True, inferSchema=True)
-inventory_fact = spark.read.csv("output/inventory_fact.csv", header=True, inferSchema=True)
+def read_csv(path):
+    temp_table = spark.read.csv(path, header=True, inferSchema=True)
+    return temp_table
+
+# Load the Dimension and Fact tables using the read_csv function
+customers_dim = read_csv("output/customers_dim.csv")
+products_dim = read_csv("output/products_dim.csv")
+sellers_dim = read_csv("output/sellers_dim.csv")
+time_dim = read_csv("output/time_dim.csv")
+transaction_dim = read_csv("output/transaction_dim.csv")
+inventory_fact = read_csv("output/inventory_fact.csv")
+
+
+# to convert a df into pandas and save in csv
+
+def save_dataframe_as_csv(spark_df, filename):
+
+
+    pandas_df = spark_df.toPandas()
+    pandas_df.to_csv(f"{output_dir}/{filename}.csv", index=False)
 
 
 # just checking
@@ -66,7 +79,7 @@ top_10_customers = inventory_fact.join(customers_dim, "CUSTOMER_ID") \
 
 top_10_customers.show()
 
-top_10_customers.toPandas().to_csv(f"{output_dir}/top_10_customers.csv")
+save_dataframe_as_csv(top_10_customers, "top_10_customers.csv")
 
 
 # Report 2: State wise number of orders
@@ -78,7 +91,7 @@ statewise_orders = inventory_fact.join(customers_dim, "CUSTOMER_ID") \
 
 statewise_orders.show()
 
-statewise_orders.toPandas().to_csv(f"{output_dir}/statewise_orders.csv")
+save_dataframe_as_csv(statewise_orders, "statewise_orders.csv")
 
 
 
@@ -91,7 +104,7 @@ payment_mode_by_state = inventory_fact.join(transaction_dim, "TRANSACTION_ID") \
 
 payment_mode_by_state.show()
 
-payment_mode_by_state.toPandas().to_csv(f"{output_dir}/payment_mode_by_state.csv")
+save_dataframe_as_csv(payment_mode_by_state, "payment_mode_by_state.csv")
 
 
 
@@ -110,7 +123,7 @@ quarterly_profit = inventory_fact.join(time_dim, "TIME_DIM_ID") \
 
 quarterly_profit.show()
 
-quarterly_profit.toPandas().to_csv(f"{output_dir}/quarterly_profit.csv")
+save_dataframe_as_csv(quarterly_profit, "quarterly_profit.csv")
 
 
 
@@ -122,7 +135,8 @@ quarterly_profit.toPandas().to_csv(f"{output_dir}/quarterly_profit.csv")
 # filtering for required year
 
 
-year_filter = int(input("enter the year"))
+year_filter = 2011
+
 
 quarterly_sales_count = inventory_fact.join(time_dim, "TIME_DIM_ID") \
     .join(products_dim, "PRODUCT_ID") \
@@ -135,7 +149,7 @@ quarterly_sales_count = inventory_fact.join(time_dim, "TIME_DIM_ID") \
 
 quarterly_sales_count.show()
 
-quarterly_sales_count.toPandas().to_csv(f"{output_dir}/quarterly_sales_count.csv")
+save_dataframe_as_csv(quarterly_sales_count, "quarterly_sales_count.csv")
 
 
 
