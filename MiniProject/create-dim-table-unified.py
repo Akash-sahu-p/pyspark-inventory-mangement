@@ -1,3 +1,8 @@
+
+# code to create dimension table and fact table
+# selecting required field to create dimension and fact table 
+
+
 from pyspark.sql import SparkSession
 from pyspark.sql.window import Window
 from pyspark.sql.functions import rank, col, monotonically_increasing_id, row_number,min
@@ -15,24 +20,17 @@ spark = SparkSession.builder \
     .appName("Star Schema") \
     .getOrCreate()
 
-
-
 spark.sparkContext.setLogLevel("ERROR")
-
 
 output_dir = "output"
 if not os.path.exists(output_dir):
     os.makedirs(output_dir)
 
-
 def save_dataframe_as_csv(spark_df, filename):
-
-
     pandas_df = spark_df.toPandas()
     pandas_df.to_csv(f"{output_dir}/{filename}.csv", index=False)
-
-
-
+    
+#reading the main input file
 
 try:
     df = spark.read.csv(file_path, header=True, inferSchema=True)
@@ -43,10 +41,8 @@ except Exception as e:
 # define output folder and handle the case when output does not exist
 
 
+# creating  Customers Dimension Table
 
-
-
-#  Customers Dimension Table
 try:
     customers_df = df.select("CUSTOMER_ID", "Customer Name", "CUSTOMER_LOGIN_ID",
                              "CUSTOMER_STREET_ADDRESS", "CUSTOMER_CITY", "CUSTOMER_STATE",
@@ -61,15 +57,16 @@ except Exception as e:
     print("an error was occured while creating cutomers dimension table ")
     print("ERROR: ", e)
 
-
-# changing to pandas (to save file in csv)
+#saving the customers_dim file
 try:
     save_dataframe_as_csv(customers_df, "customers_dim")
 except Exception as e:
     print("an error was occured while writing(saving) cutomers dimension table ")
     print("ERROR: ", e)
 
-# product dimension table
+
+
+# creating product dimension table
 
 try:
 
@@ -88,13 +85,14 @@ except Exception as e:
     print("an error was occured while creating product dimension table ")
     print("ERROR: ", e)
 
-# changing to pandas and saving as csv file
+# saving products_dim file
 try:
     save_dataframe_as_csv(products_dim, "products_dim")
 
 except Exception as e:
     print("an error was occured while saving(writing) product dimension table ")
     print("ERROR: ", e)
+
 
 # Create Seller Dimension Table
 try:
@@ -110,7 +108,8 @@ except Exception as e:
     print("an error was occured while creating seller dimension table ")
     print("ERROR: ", e)
 
-# creating pandas and saving it
+
+# saving sellers_dim file
 try:
     save_dataframe_as_csv(sellers_df, "sellers_dim")
 
@@ -118,7 +117,9 @@ except Exception as e:
     print("an error was occured while writing  seller dimension table ")
     print("ERROR: ", e)
 
-# Create Time Dimension
+
+
+# Create Time Dimension file
 
 try:
     time_df = df.select("Date").dropDuplicates()
@@ -135,22 +136,21 @@ try:
     # abc =  year(to_date("28-aug-11", "dd-mmm-yy"))
     # print(abc)
 
-    time_dim.show()  # write.csv("output/time_dim", header=True)
+    time_dim.show() 
 
 except Exception as e:
     print("an error was occured while creating Date dimension table ")
     print("ERROR: ", e)
 
-
-
+# saving the time_dim table
 try:
     save_dataframe_as_csv(time_dim,"time_dim")
 except Exception as e:
     print("an error was occured while saving time dimension table " )
     print( "ERROR: " , e)
 
-#  Transaction  Table
 
+#  creatingTransaction  Table
 try:
 
     transaction_df = df.select("TRANSACTION_ID", "TRANSACTION_DATE", "TRANSACTION_AMOUNT",
@@ -164,6 +164,8 @@ except Exception as e:
     print("an error was occured while creating transaction dimension table ")
     print("ERROR: ", e)
 
+
+# saving transaction dim file
 try:
     save_dataframe_as_csv(transaction_df, "transaction_dim")
 
@@ -171,7 +173,8 @@ except Exception as e:
     print("an error was occured while writing  trasaction dimension table ")
     print("ERROR: ", e)
 
-#  Fact Table (Inventory)
+
+# creating Fact Table (Inventory)
 try:
     inventory_fact_df = df.select("DATE", "TRANSACTION_ID", "PRODUCT_ID", "CUSTOMER_ID",
                                   "SELLER_ID", "PRODUCT_COST_PRICE", "PRODUCT_SELLING_PRICE").dropDuplicates()
@@ -186,6 +189,7 @@ except Exception as e:
     print("an error was occured while creating inventory fact table ")
     print("ERROR: ", e)
 
+# saving inventory_fact table
 try:
     save_dataframe_as_csv(inventory_fact, "inventory_fact")
 
@@ -194,5 +198,5 @@ except Exception as e:
     print("ERROR: ", e)
 
 
-
+#stopping the spark session
 spark.stop()
